@@ -1,0 +1,459 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Tumble Tower - Data Structures Edition</title>
+    <meta name="description" content="Interactive 3D Jenga-style tower game demonstrating Singly Linked Lists, Queues, Stacks, and Auxiliary Stacks with full turn rotation, undo, and stability mechanics." />
+    <meta property="og:title" content="Tumble Tower - Data Structures Edition" />
+    <meta property="og:description" content="Interactive 3D Jenga-style tower game demonstrating Singly Linked Lists, Queues, Stacks, and Auxiliary Stacks with full turn rotation, undo, and stability mechanics." />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+
+    <!-- Google Fonts for crisp typography & monospace code pointers -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;600;700&display=swap" rel="stylesheet">
+
+    <!-- Stylesheet -->
+    <link rel="stylesheet" href="/style.css">
+  </head>
+  <body>
+    <div id="app-root">
+      
+      <!-- Top Application Header -->
+      <header class="app-header" role="banner">
+        <div class="brand-group">
+          <div class="brand-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="4" y="2" width="16" height="4" rx="1"></rect>
+              <rect x="4" y="8" width="16" height="4" rx="1"></rect>
+              <rect x="4" y="14" width="16" height="4" rx="1"></rect>
+              <rect x="4" y="20" width="16" height="4" rx="1"></rect>
+            </svg>
+          </div>
+          <div class="brand-titles">
+            <h1 class="brand-title">
+              TUMBLE TOWER
+              <span class="badge-ds">Data Structures</span>
+            </h1>
+            <span class="brand-subtitle">Linked List • Turn Queue • History Stack • Auxiliary Stack</span>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button id="btn-inspect-ds" class="btn btn-secondary" title="View interactive diagram of internal pointers" aria-label="Inspect Data Structures">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+            Inspect Data Structures
+          </button>
+
+          <button id="btn-undo" class="btn btn-secondary" title="Undo previous move (Ctrl+Z)" aria-label="Undo Previous Move" disabled>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7v6h6"/><path d="M21 17a9 9 0 0 0-9-9 9 9 0 0 0-6 2.3L3 13"/></svg>
+            Undo Move
+            <span id="undo-badge" class="badge-counter">0</span>
+          </button>
+
+          <button id="btn-run-tests" class="btn btn-secondary" title="Run self-test suite" aria-label="Run Unit Tests">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>
+            Tests
+          </button>
+
+          <button id="btn-audio-toggle" class="btn btn-secondary btn-icon" title="Toggle audio synthesizer sound effects" aria-label="Toggle Sound">
+            🔊
+          </button>
+
+          <button id="btn-restart" class="btn btn-danger" title="Restart game with new setup" aria-label="Restart Game">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+            Restart
+          </button>
+        </div>
+      </header>
+
+      <!-- Main Workspace -->
+      <main class="main-workspace" role="main">
+        
+        <!-- Left Sidebar: Active Player, Turn Queue & Telemetry -->
+        <aside class="sidebar-panel sidebar-left" aria-label="Turn and Telemetry Panel">
+          
+          <!-- Active Player Card -->
+          <section class="card active-turn-card" aria-labelledby="active-turn-heading">
+            <div class="card-header">
+              <span id="active-turn-heading" class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                Active Turn
+              </span>
+            </div>
+            <div class="player-highlight">
+              <div id="active-player-avatar" class="player-avatar" aria-hidden="true">P1</div>
+              <div class="player-info">
+                <div id="active-player-name" class="player-name">Player 1</div>
+                <div id="active-player-hint" class="player-status-hint">Select a block from levels below top</div>
+              </div>
+            </div>
+            <p class="turn-instructions">
+              Click a removable block from any level below the top. Selecting never destabilizes the tower—only a confirmed removal will pull it.
+            </p>
+          </section>
+
+          <!-- Turn Queue Widget (FIFO) -->
+          <section class="card" aria-labelledby="turn-queue-heading">
+            <div class="card-header">
+              <span id="turn-queue-heading" class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 18a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2"/><circle cx="9" cy="9" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                Turn Queue (FIFO)
+              </span>
+              <span class="badge-ds">Queue</span>
+            </div>
+            <div id="queue-list" class="queue-list">
+              <!-- Rendered dynamically from TurnQueue -->
+            </div>
+          </section>
+
+          <!-- Tower Telemetry -->
+          <section class="card" aria-labelledby="telemetry-heading">
+            <div class="card-header">
+              <span id="telemetry-heading" class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+                Tower Telemetry
+              </span>
+            </div>
+            <div class="telemetry-grid">
+              <div class="telemetry-item">
+                <span class="telemetry-label">Tower Height</span>
+                <span id="telemetry-height" class="telemetry-value">10</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="telemetry-label">Total Blocks</span>
+                <span id="telemetry-blocks" class="telemetry-value">30</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="telemetry-label">Total Moves</span>
+                <span id="telemetry-moves" class="telemetry-value">0</span>
+              </div>
+              <div class="telemetry-item">
+                <span class="telemetry-label">Placed On Top</span>
+                <span id="telemetry-placed" class="telemetry-value">0</span>
+              </div>
+              <div class="telemetry-item" style="grid-column: 1 / -1; display: flex; flex-direction: row; align-items: center; justify-content: space-between;">
+                <div>
+                  <span class="telemetry-label">Shake Intensity (on remove)</span>
+                  <div style="font-size: 10px; color: var(--text-dim);">Scales up as tower height decreases</div>
+                </div>
+                <span id="telemetry-shake" class="telemetry-value" style="color: var(--accent-amber);">1.0x</span>
+              </div>
+              <div id="telemetry-stability" class="telemetry-stability">
+                <span class="telemetry-label">Tower Stability</span>
+                <span id="stability-pill" class="stability-pill">✓ SOLID</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- Linked List Search / Traversal -->
+          <section class="card" aria-labelledby="search-heading">
+            <div class="card-header">
+              <span id="search-heading" class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                Search Traversal
+              </span>
+              <span class="badge-ds">O(N) Traversal</span>
+            </div>
+            <p style="font-size: 11px; color: var(--text-dim);">Traverse the linked list by block ID (e.g. L3-B2) or level (e.g. 5):</p>
+            <form id="search-form" class="search-box-form">
+              <input type="text" id="search-input" class="input-text" placeholder="e.g. L4-B2 or 7" aria-label="Search block or level" />
+              <button type="submit" class="btn btn-secondary">Find</button>
+            </form>
+            <div id="search-feedback" class="search-feedback" aria-live="polite"></div>
+          </section>
+
+        </aside>
+
+        <!-- Center Stage: 3D Interactive Tower -->
+        <section class="center-stage" aria-label="3D Tower Interactive Stage">
+          
+          <!-- Stage Top Controls -->
+          <div class="stage-toolbar">
+            <div class="view-controls" role="group" aria-label="3D View Angle Controls">
+              <button class="view-btn active" data-view="iso">Isometric</button>
+              <button class="view-btn" data-view="front">Front</button>
+              <button class="view-btn" data-view="side">Side</button>
+              <button class="view-btn" data-view="top">Top</button>
+            </div>
+
+            <!-- Auxiliary Stack Indicator Pill -->
+            <div id="aux-stack-hud" class="aux-stack-hud" title="Shows state of Auxiliary Stack during block extraction">
+              <span class="aux-status-dot" aria-hidden="true"></span>
+              <span id="aux-status-text">Aux Stack: Idle</span>
+            </div>
+          </div>
+
+          <!-- 3D Tower Viewport -->
+          <div id="tower-viewport" class="tower-viewport">
+            <div id="tower-shake-wrapper" class="tower-shake-wrapper">
+              <div id="tower-stage" class="tower-stage view-iso" role="region" aria-label="Interactive 3D Tower">
+                <!-- Rendered dynamically from TowerLinkedList -->
+              </div>
+              <!-- Foundation Pedestal -->
+              <div class="tower-foundation" aria-hidden="true">Foundation Base (Ground)</div>
+            </div>
+          </div>
+
+          <!-- Floating Selection Confirmation Bar -->
+          <div id="action-bar" class="action-confirmation-bar" style="display: none;" role="region" aria-label="Block Selection Actions">
+            <div class="action-bar-info">
+              <div id="action-bar-block-id" class="action-bar-block">Selected: L4-B2</div>
+              <div id="action-bar-stability" class="action-bar-stability">Safe pull: Level retains stable support.</div>
+            </div>
+            <div class="action-bar-buttons">
+              <button id="btn-deselect" class="btn btn-secondary">Deselect</button>
+              <button id="btn-confirm-remove" class="btn btn-primary">Confirm Remove</button>
+            </div>
+          </div>
+
+        </section>
+
+        <!-- Right Sidebar: Move History & Live Pointer Chains -->
+        <aside class="sidebar-panel sidebar-right" aria-label="History and Data Structure Pointer Streams">
+          
+          <!-- Move History Stack Widget (LIFO) -->
+          <section class="card" aria-labelledby="history-heading">
+            <div class="card-header">
+              <span id="history-heading" class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 8v4l3 3"/><circle cx="12" cy="12" r="9"/></svg>
+                Move History (LIFO)
+              </span>
+              <span class="badge-ds">Stack</span>
+            </div>
+            <div id="history-list" class="history-list">
+              <!-- Rendered dynamically from HistoryStack -->
+            </div>
+          </section>
+
+          <!-- Live Pointer Streams Panel -->
+          <section class="card" aria-labelledby="streams-heading">
+            <div class="card-header">
+              <span id="streams-heading" class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                Live Pointer Chains
+              </span>
+              <span class="badge-ds">Real-time</span>
+            </div>
+
+            <!-- Tower Linked List Pointer Chain -->
+            <div class="mini-ds-box">
+              <div class="mini-ds-header">
+                <span>Tower State (Singly Linked List)</span>
+                <span>Head ➔ Tail</span>
+              </div>
+              <div id="pointer-tower" class="pointer-flow-text">Head -> NULL</div>
+            </div>
+
+            <!-- Turn Queue Pointer Chain -->
+            <div class="mini-ds-box">
+              <div class="mini-ds-header">
+                <span>Turn Queue (FIFO Queue)</span>
+                <span>Front ➔ Rear</span>
+              </div>
+              <div id="pointer-queue" class="pointer-flow-text">Front -> NULL</div>
+            </div>
+
+            <!-- History Stack Pointer Chain -->
+            <div class="mini-ds-box">
+              <div class="mini-ds-header">
+                <span>History Stack (LIFO Stack)</span>
+                <span>Top ➔ Base</span>
+              </div>
+              <div id="pointer-history" class="pointer-flow-text">Top -> NULL</div>
+            </div>
+          </section>
+
+          <!-- Quick Data Structures Guide / Complexity Note -->
+          <section class="card">
+            <div class="card-header">
+              <span class="card-title">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                Algorithmic Complexity
+              </span>
+            </div>
+            <ul style="font-size: 11px; color: var(--text-dim); list-style: none; display: flex; flex-direction: column; gap: 6px; font-family: var(--font-mono);">
+              <li>• Add New Top Level: <strong style="color: var(--accent-emerald);">O(1)</strong> Prepend</li>
+              <li>• Player Enqueue / Dequeue: <strong style="color: var(--accent-emerald);">O(1)</strong> FIFO</li>
+              <li>• Move Record Push / Pop: <strong style="color: var(--accent-emerald);">O(1)</strong> LIFO</li>
+              <li>• Aux Stack Level Access: <strong style="color: var(--accent-cyan);">O(K)</strong> K levels</li>
+              <li>• Search Level / Block: <strong style="color: var(--accent-amber);">O(N)</strong> Linear</li>
+            </ul>
+          </section>
+
+        </aside>
+
+      </main>
+
+      <!-- Toast Container for friendly non-blocking alerts -->
+      <div id="toast-container" aria-live="assertive" role="region"></div>
+
+      <!-- ================= MODALS ================= -->
+
+      <!-- 1. Player Setup Modal -->
+      <div id="setup-modal" class="modal-overlay" style="display: none;" role="dialog" aria-labelledby="setup-modal-title">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 id="setup-modal-title" class="modal-title">Tumble Tower Setup</h2>
+            <p class="modal-desc">Configure players for this match. 2 to 4 players supported.</p>
+          </div>
+
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 8px;">
+            NUMBER OF PLAYERS
+          </label>
+          <div class="player-count-selector" role="radiogroup">
+            <button type="button" class="count-chip active" data-count="2">2 Players</button>
+            <button type="button" class="count-chip" data-count="3">3 Players</button>
+            <button type="button" class="count-chip" data-count="4">4 Players</button>
+          </div>
+
+          <label style="font-size: 12px; font-weight: 700; color: var(--text-muted); display: block; margin-bottom: 8px;">
+            STARTING TOWER HEIGHT
+          </label>
+          <div class="player-count-selector height-selector" role="radiogroup" style="margin-bottom: 18px;">
+            <button type="button" class="count-chip height-chip" data-height="6">6 Levels (Intense Shake)</button>
+            <button type="button" class="count-chip height-chip" data-height="8">8 Levels</button>
+            <button type="button" class="count-chip height-chip active" data-height="10">10 Levels (Standard)</button>
+          </div>
+
+          <div id="player-inputs-list" class="player-inputs-list">
+            <!-- Populated via JS based on selected player count -->
+          </div>
+
+          <button id="btn-start-game" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 14px;">
+            Begin Game
+          </button>
+        </div>
+      </div>
+
+      <!-- 2. Game Over / Tower Collapsed Modal -->
+      <div id="game-over-modal" class="modal-overlay" style="display: none;" role="dialog" aria-labelledby="collapse-modal-title">
+        <div class="modal-content" style="text-align: center;">
+          <div style="font-size: 48px; margin-bottom: 8px;" aria-hidden="true">💥</div>
+          <h2 id="collapse-modal-title" class="modal-title" style="color: var(--accent-rose); font-size: 26px;">TOWER COLLAPSED!</h2>
+          <p style="font-size: 15px; margin-top: 10px; color: var(--text-main);">
+            <strong id="game-over-loser" style="color: var(--accent-rose);">Player 1</strong> made the fatal move and caused the tower to fall!
+          </p>
+          <div id="game-over-reason" style="margin: 14px 0; background: rgba(244, 63, 94, 0.12); border: 1px solid rgba(244, 63, 94, 0.3); border-radius: var(--radius-md); padding: 10px; font-size: 12px; color: #fca5a5; font-family: var(--font-mono);">
+            Reason for collapse
+          </div>
+          <div style="display: flex; justify-content: space-around; margin: 18px 0; padding: 12px; background: var(--bg-tertiary); border-radius: var(--radius-md);">
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Moves Played</div>
+              <div id="game-over-moves" style="font-size: 18px; font-weight: 800; font-family: var(--font-mono);">0</div>
+            </div>
+            <div>
+              <div style="font-size: 10px; color: var(--text-dim); text-transform: uppercase;">Tower Height</div>
+              <div id="game-over-height" style="font-size: 18px; font-weight: 800; font-family: var(--font-mono);">10</div>
+            </div>
+          </div>
+          <button id="btn-play-again" class="btn btn-primary" style="width: 100%; padding: 12px; font-size: 14px;">
+            Start New Game
+          </button>
+        </div>
+      </div>
+
+      <!-- 3. Restart Confirmation Modal -->
+      <div id="restart-modal" class="modal-overlay" style="display: none;" role="dialog" aria-labelledby="restart-modal-title">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h2 id="restart-modal-title" class="modal-title">Restart Game?</h2>
+            <p class="modal-desc">This will reset all tower levels, players, and move history.</p>
+          </div>
+          <div style="display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px;">
+            <button id="btn-cancel-restart" class="btn btn-secondary">Cancel</button>
+            <button id="btn-confirm-restart" class="btn btn-danger">Yes, Reset Game</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- 4. Deep Data Structures Inspector Modal -->
+      <div id="ds-modal" class="modal-overlay" style="display: none;" role="dialog" aria-labelledby="ds-modal-title">
+        <div class="modal-content modal-lg">
+          <div class="modal-header" style="display: flex; align-items: flex-start; justify-content: space-between;">
+            <div>
+              <h2 id="ds-modal-title" class="modal-title">Data Structures Architecture Inspector</h2>
+              <p class="modal-desc">Live memory pointer topology backing Tumble Tower state.</p>
+            </div>
+            <button id="btn-close-ds-modal" class="btn btn-secondary btn-icon" aria-label="Close Inspector">✕</button>
+          </div>
+
+          <div class="ds-inspector-body">
+            
+            <!-- Singly Linked List -->
+            <div class="ds-diagram-section">
+              <div class="ds-diagram-title">
+                <span>1. Tower State — Singly Linked List (Head = Top Level)</span>
+                <span class="badge-ds">Prepend O(1) • Traversal O(N)</span>
+              </div>
+              <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+                Each node represents one 3-block level. When the top level is filled, a new LevelNode is prepended as head in O(1).
+              </p>
+              <div id="ds-tower-chain" class="ds-node-chain-view"></div>
+            </div>
+
+            <!-- Turn Queue -->
+            <div class="ds-diagram-section">
+              <div class="ds-diagram-title">
+                <span>2. Turn Queue — FIFO Queue</span>
+                <span class="badge-ds">Enqueue O(1) • Dequeue O(1)</span>
+              </div>
+              <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+                Players rotate turns via standard FIFO queue: active player is dequeued from Front, makes their move, and is re-enqueued at Rear.
+              </p>
+              <div id="ds-queue-chain" class="ds-node-chain-view"></div>
+            </div>
+
+            <!-- History Stack -->
+            <div class="ds-diagram-section">
+              <div class="ds-diagram-title">
+                <span>3. Move History — LIFO Stack</span>
+                <span class="badge-ds">Push O(1) • Pop O(1) Undo</span>
+              </div>
+              <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+                Every confirmed block placement is pushed onto the stack. Undo pops the top record, reverses the block coordinates, and restores the turn queue order.
+              </p>
+              <div id="ds-history-chain" class="ds-node-chain-view"></div>
+            </div>
+
+            <!-- Auxiliary Stack -->
+            <div class="ds-diagram-section">
+              <div class="ds-diagram-title">
+                <span>4. Auxiliary Stack — Extraction Pattern</span>
+                <span class="badge-ds">CS Traversal Pattern</span>
+              </div>
+              <p style="font-size: 11px; color: var(--text-muted); margin-bottom: 8px;">
+                To extract a block from level K in a singly linked list without random access: levels above K are pushed onto this auxiliary stack, the target block is extracted, and levels are popped back onto the tower in identical order.
+              </p>
+              <div id="ds-aux-status" style="font-family: var(--font-mono); font-size: 12px; color: var(--accent-cyan);">
+                State: Idle | Stack: [IDLE] - Empty
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+      <!-- 5. Automated Test Suite Modal -->
+      <div id="test-modal" class="modal-overlay" style="display: none;" role="dialog" aria-labelledby="test-modal-title">
+        <div class="modal-content modal-lg">
+          <div class="modal-header" style="display: flex; align-items: flex-start; justify-content: space-between;">
+            <div>
+              <h2 id="test-modal-title" class="modal-title">Automated Data Structures Test Suite</h2>
+              <p class="modal-desc">Verifying Node classes, FIFO Queues, LIFO Stacks, Undo, and Deterministic Collapse.</p>
+            </div>
+            <button id="btn-close-test-modal" class="btn btn-secondary btn-icon" aria-label="Close Test Suite">✕</button>
+          </div>
+
+          <pre id="test-log" class="test-suite-log">Running tests...</pre>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Main JavaScript Logic (ES6 Module) -->
+    <script type="module" src="/game.js"></script>
+  </body>
+</html>

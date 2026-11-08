@@ -1,0 +1,6 @@
+{
+  "name": "Tumble Tower - Data Structures Edition",
+  "description": "Interactive 3D Jenga-style tower game demonstrating Singly Linked Lists, Queues, Stacks, and Auxiliary Stacks with full turn rotation, undo, and stability mechanics.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
